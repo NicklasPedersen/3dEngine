@@ -22,5 +22,11 @@ public:
 	Window();
 	void Update();
 	bool IsAlive();
+	void SetTitle(const char *str);
 	void DrawPixel(int x, int y, COLORREF c);
+	RECT GetRect();
+	Vector2 GetTopLeft();
+	Vector2 GetBottomRight();
+	Vector2 GetDimensions();
+	void Clear(COLORREF c);
 };

@@ -80,6 +80,11 @@ bool Window::IsAlive()
 	return IsWindow(hwnd);
 }
 
+void Window::SetTitle(const char *str)
+{
+	SetWindowText(hwnd, str);
+}
+
 void Window::DrawPixel(int x, int y, COLORREF c)
 {
 	HDC hDc = GetDC(hwnd);
@@ -87,3 +92,49 @@ void Window::DrawPixel(int x, int y, COLORREF c)
 	ReleaseDC(hwnd, hDc);
 	DeleteDC(hDc);
 }
+
+RECT Window::GetRect()
+{
+	RECT r;
+	GetWindowRect(hwnd, &r);
+	return r;
+}
+
+Vector2 Window::GetTopLeft()
+{
+	RECT r = GetRect();
+	return Vector2(r.left, r.top);
+}
+
+Vector2 Window::GetBottomRight()
+{
+	RECT r = GetRect();
+	return Vector2(r.right, r.bottom);
+}
+
+Vector2 Window::GetDimensions()
+{
+	return GetBottomRight() - GetTopLeft();
+}
+
+void Window::Clear(COLORREF c)
+{
+        BITMAP bm;
+        PAINTSTRUCT ps;
+
+        HDC hdc = BeginPaint(hwnd, &ps);
+
+        HDC hdcMem = CreateCompatibleDC(hdc);
+		Vector2 size = GetDimensions();
+		char black[4] = { 0, 0, 0, 0 };
+		BITMAP k = { 0, size.x, size.y, 2, 1, 32, black };
+		HBITMAP b = (HBITMAP) k;
+
+        BitBlt(hdc, 0, 0, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, SRCCOPY);
+
+        SelectObject(hdcMem, hbmOld);
+        DeleteDC(hdcMem);
+
+        EndPaint(hwnd, &ps);
+}
+
