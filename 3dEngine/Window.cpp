@@ -26,6 +26,8 @@ Window::Window()
 {
 	instance = GetModuleHandle(nullptr);
 
+	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = 0;
 	wc.lpfnWndProc = WndProc;
@@ -42,7 +44,7 @@ Window::Window()
 	if (!RegisterClassEx(&wc))
 	{
 		MessageBox(nullptr, "Window Registration Failed!", "Error!",
-			MB_ICONEXCLAMATION | MB_OK);
+		           MB_ICONEXCLAMATION | MB_OK);
 		return;
 	}
 
@@ -50,20 +52,23 @@ Window::Window()
 		WS_EX_CLIENTEDGE,
 		g_szClassName,
 		"The title of my window",
-		0,
+		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT, 240, 120,
 		nullptr, nullptr, instance, nullptr);
 
 	if (!hwnd)
 	{
 		MessageBox(nullptr, "Window Creation Failed!", "Error!",
-			MB_ICONEXCLAMATION | MB_OK);
+		           MB_ICONEXCLAMATION | MB_OK);
 		return;
 	}
 	SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG)this);
 
 	ShowWindow(hwnd, SW_SHOWDEFAULT);
 	UpdateWindow(hwnd);
+
+	Vector2 dim = Dimensions();
+	bitmap = new Gdiplus::Bitmap(dim.x, dim.y, PixelFormat32bppARGB);
 }
 
 void Window::Update()
@@ -80,10 +85,56 @@ bool Window::IsAlive()
 	return IsWindow(hwnd);
 }
 
-void Window::DrawPixel(int x, int y, COLORREF c)
+RECT Window::Rect()
 {
-	HDC hDc = GetDC(hwnd);
-	SetPixel(hDc, x, y, c);
-	ReleaseDC(hwnd, hDc);
-	DeleteDC(hDc);
+	RECT r;
+	GetWindowRect(hwnd, &r);
+	return r;
+}
+
+Vector2 Window::TopLeft()
+{
+	RECT r = Rect();
+	return Vector2(r.left, r.top);
+}
+
+Vector2 Window::BottomRight()
+{
+	RECT r = Rect();
+	return Vector2(r.right, r.bottom);
+}
+
+Vector2 Window::Dimensions()
+{
+	return BottomRight() - TopLeft();
+}
+
+
+void Window::DrawPixel(int x, int y, UINT argb)
+{
+	Gdiplus::Graphics g(hwnd);
+	Gdiplus::SolidBrush b(Gdiplus::ARGB(0xFFFF0000));
+	g.SetSmoothingMode(Gdiplus::SmoothingModeNone);
+	g.FillRectangle(&b, x, y, 1, 1);
+}
+
+
+void Window::Clear(int r, int g, int b)
+{
+	Gdiplus::Graphics gr(hwnd);
+	gr.Clear(Gdiplus::ARGB(0x00000000));
+}
+
+void Window::ClearScreen(int r, int g, int b)
+{
+	Gdiplus::Graphics gr(hwnd);
+	gr.Clear(Gdiplus::ARGB(0x00000000));
+}
+
+void Window::DrawTriangle(Vector2 p1, Vector2 p2, Vector2 p3, COLORREF c)
+{
+	Gdiplus::SolidBrush b(Gdiplus::ARGB(0xFFFF0000));
+	Gdiplus::Graphics gr(hwnd);
+	Gdiplus::PointF ps[3] = { { p1.x, p1.y}, {p2.x, p2.y}, {p3.x, p3.y} };
+	gr.FillPolygon(&b, ps, 3);
 }
