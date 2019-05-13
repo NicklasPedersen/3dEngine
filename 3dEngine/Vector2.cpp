@@ -24,13 +24,3 @@ Vector2::Vector2(const Vector2 &v)
 {
 	x = v.x, y = v.y;
 }
-
-Vector2 Vector2::operator+(const Vector2 & v)
-{
-	return Vector2(x + v.x, y + v.y);
-}
-
-Vector2 Vector2::operator-(const Vector2 & v)
-{
-	return Vector2(x - v.x, y - v.y);
-}

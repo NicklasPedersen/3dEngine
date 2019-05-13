@@ -12,7 +12,4 @@ public:
 	Vector2(POINT p);
 	
 	Vector2(const Vector2 &v);
-
-	Vector2 operator+(const Vector2 &v);
-	Vector2 operator-(const Vector2 &v);
 };

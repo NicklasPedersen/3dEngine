@@ -10,8 +10,6 @@ int main()
 	while(w->IsAlive())
 	{
 		w->Update();
-		w->Clear(RGB(0,0,0));
-		w->SetTitle("Hello world!");
 		if(w->key == 'K')
 		{
 			for(int i = 0; i < 10; i++)
