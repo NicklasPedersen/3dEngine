@@ -11,6 +11,8 @@ public:
 	Vector2(float x, float y);
 	Vector2(POINT p);
 	
+	float Surface();
+
 	Vector2(const Vector2 &v);
 
 	Vector2 operator+(const Vector2 &v);

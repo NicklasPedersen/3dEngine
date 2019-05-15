@@ -20,6 +20,11 @@ Vector2::Vector2(POINT p)
 	x = (float)p.x, y = (float)p.y;
 }
 
+float Vector2::Surface()
+{
+	return x * y;
+}
+
 Vector2::Vector2(const Vector2 &v)
 {
 	x = v.x, y = v.y;
