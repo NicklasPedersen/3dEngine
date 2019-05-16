@@ -25,6 +25,17 @@ float Vector2::Surface()
 	return x * y;
 }
 
+float Vector2::Cross(Vector2 v)
+{
+	return x * v.y - y * v.x;
+}
+
+void Vector2::ToInt()
+{
+	x = (int)x;
+	y = (int)y;
+}
+
 Vector2::Vector2(const Vector2 &v)
 {
 	x = v.x, y = v.y;

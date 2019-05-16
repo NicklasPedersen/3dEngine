@@ -151,8 +151,157 @@ void Window::Clear(Vector4 argb)
 	}
 }
 
-void Window::DrawLine(Vector2 p1, Vector2 p2, Vector4 argb)
+void Window::DrawLineLow(int x0, int y0, int x1, int y1, Vector4 argb)
 {
+	Gdiplus::BitmapData bmd;
+	if (Gdiplus::Ok != bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+		return;
+	BYTE* dptr = (BYTE *)bmd.Scan0;
+
+	int dx = x1 - x0;
+	int dy = y1 - y0;
+	int yi = 1;
+	if (dy < 0)
+	{
+		yi = -1;
+		dy = -dy;
+	}
+	float D = 2 * dy - dx;
+	float y = y0;
+	for (int x = x0; x <= x1; x++)
+	{
+		DrawPixel(dptr, x, y, bmd.Width, bmd.Width, argb);
+		if (D > 0)
+		{
+			y = y + yi;
+			D = D - 2 * dx;
+		}
+		D = D + 2 * dy;
+	}
+	bitmap->UnlockBits(&bmd);
+}
+
+void Window::DrawLineHigh(int x0, int y0, int x1, int y1, Vector4 argb)
+{
+	Gdiplus::BitmapData bmd;
+	if (Gdiplus::Ok != bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+		return;
+	BYTE* dptr = (BYTE *)bmd.Scan0;
+
+	int dx = x1 - x0;
+	int dy = y1 - y0;
+	float xi = 1;
+	if (dx < 0)
+	{
+		xi = -1;
+		dx = -dx;
+	}
+	float D = 2 * dx - dy;
+	float x = x0;
+	for (int y = y0; y <= y1; y++)
+	{
+		DrawPixel(dptr, x, y, bmd.Width, bmd.Width, argb);
+		if (D > 0)
+		{
+			x += xi;
+			D -= 2 * dy;
+		}
+		D += 2 * dx;
+	}
+	bitmap->UnlockBits(&bmd);
+}
+
+void Window::DrawVerticalLine(int y0, int y1, int x, Vector4 argb)
+{
+	Gdiplus::BitmapData bmd;
+	if (Gdiplus::Ok != bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+		return;
+	BYTE* dptr = (BYTE *)bmd.Scan0;
+
+	if (y0 > y1)
+	{
+		int temp = y0;
+		y0 = y1;
+		y1 = temp;
+	}
+	for (int y = y0; y <= y1; y++)
+		DrawPixel(dptr, x, y, bmd.Width, bmd.Height, argb);
+	
+	bitmap->UnlockBits(&bmd);
+}
+
+void Window::DrawHorizontalLine(int x0, int x1, int y, Vector4 argb)
+{
+	Gdiplus::BitmapData bmd;
+	if (Gdiplus::Ok != bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+		return;
+	BYTE* dptr = (BYTE *)bmd.Scan0;
+
+	if (x0 > x1)
+	{
+		int temp = x0;
+		x0 = x1;
+		x1 = temp;
+	}
+	for (int x = x0; x <= x1; x++)
+		DrawPixel(dptr, x, y, bmd.Width, bmd.Height, argb);
+
+	bitmap->UnlockBits(&bmd);
+}
+
+void Window::DrawPixel(BYTE *data, int x, int y, int width, int height, Vector4 argb)
+{
+	if (x < 0 || x >= width || y < 0 || y >= width)
+		return;
+	BYTE *start = data + (int)x * 4 + (int)y * width * 4;
+	*(start) = argb.w;
+	*(start + 1) = argb.z;
+	*(start + 2) = argb.y;
+	*(start + 3) = argb.x;
+}
+
+void Window::DrawLine(Vector2 p0, Vector2 p1, Vector4 argb)
+{
+	p0.ToInt();
+	p1.ToInt();
+	Vector2 delta = p1 - p0;
+	delta.ToInt();
+	if (delta.x == 0)
+	{
+		DrawVerticalLine(p0.y, p1.y, p0.x, argb);
+	}
+	else if (delta.y == 0)
+	{
+		DrawHorizontalLine(p0.x, p1.x, p0.y, argb);
+	}
+	else if (Mathf::Abs(delta.x) > Mathf::Abs(delta.y))
+	{
+		if (p0.x > p1.x)
+		{
+			DrawLineLow(p1.x, p1.y, p0.x, p0.y, argb);
+		}
+		else
+		{
+			DrawLineLow(p0.x, p0.y, p1.x, p1.y, argb);
+		}
+	}
+	else
+	{
+		if (p0.y > p1.y)
+		{
+			DrawLineHigh(p1.x, p1.y, p0.x, p0.y, argb);
+		}
+		else
+		{
+			DrawLineHigh(p0.x, p0.y, p1.x, p1.y, argb);
+		}
+	}
+}
+
+void Window::DrawLine1(Vector2 p1, Vector2 p2, Vector4 argb)
+{
+	p1 = Vector2((int)p1.x, (int)p1.y);
+	p2 = Vector2((int)p2.x, (int)p2.y);
 	Vector2 delta = p2 - p1;
 	if(delta.x == 0)
 	{
@@ -169,21 +318,15 @@ void Window::DrawLine(Vector2 p1, Vector2 p2, Vector4 argb)
 	{
 		float deltaerr = Mathf::Abs(delta.y / delta.x);
 		float error = 0;
-		float y = p1.y;
+		int y = p1.y;
 		BYTE* dptr = (BYTE *) bmd.Scan0;
-		for(int x = p1.x; x <= p2.x; x++)
+		for(int x = p1.x; x <= (int)p2.x; x++)
 		{
-			if(x < 0 || x >= bmd.Width || y < 0 || y >= bmd.Height)
-				continue;
-			BYTE *start = dptr + x * 4 + (int)y * bmd.Width * 4;
-			*(start) = argb.w;
-			*(start + 1) = argb.z;
-			*(start + 2) = argb.y;
-			*(start + 3) = argb.x;
+			DrawPixel(dptr, x, y, bmd.Width, bmd.Height, argb);
 			error += deltaerr;
 			while(error >= 0.5f)
 			{
-				y += Mathf::Sign(delta.y);
+				y += Mathf::Sign((int)delta.y);
 				error -= 1.0f;
 			}
 		}
@@ -194,19 +337,12 @@ void Window::DrawLine(Vector2 p1, Vector2 p2, Vector4 argb)
 void Window::DrawVerticalLine(Vector2 p1, int length, Vector4 argb)
 {
 	Gdiplus::BitmapData bmd;
-	Gdiplus::Rect r = { 0, 0, (INT)dimensions.x, (INT)dimensions.y };
 	if(Gdiplus::Ok == bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
 	{
 		BYTE* dptr = (BYTE *) bmd.Scan0;
 		for(int i = 0; i < length; i++)
 		{
-			if(p1.x < 0 || p1.x >= bmd.Width || (p1.y + i) < 0 || (p1.y + i) >= bmd.Height)
-				continue;
-			BYTE *start = dptr + (INT)p1.x * 4 + ((INT)p1.y + i) * bmd.Width * 4;
-			*(start) = argb.w;
-			*(start + 1) = argb.z;
-			*(start + 2) = argb.y;
-			*(start + 3) = argb.x;
+			DrawPixel(dptr, p1.x, p1.y + i, bmd.Width, bmd.Height, argb);
 		}
 		bitmap->UnlockBits(&bmd);
 	}
@@ -222,7 +358,7 @@ void Window::DrawFlatBottomTriangle(Vector2 v1, Vector2 v2, Vector2 v3, Vector4 
 
 	for (int scanlineY = v1.y; scanlineY <= v2.y; scanlineY++)
 	{
-		DrawLine(Vector2((int)curx1, scanlineY), Vector2((int)curx2, scanlineY), argb);
+		DrawHorizontalLine(curx1, curx2, scanlineY, argb);
 		curx1 += invslope1;
 		curx2 += invslope2;
 	}
@@ -238,50 +374,90 @@ void Window::DrawFlatTopTriangle(Vector2 v1, Vector2 v2, Vector2 v3, Vector4 arg
 
 	for (int scanlineY = v3.y; scanlineY > v1.y; scanlineY--)
 	{
-		DrawLine(Vector2((int)curx1, scanlineY), Vector2((int)curx2, scanlineY), argb);
+		DrawHorizontalLine(curx1, curx2, scanlineY, argb);
 		curx1 -= invslope1;
 		curx2 -= invslope2;
 	}
 }
 
-void Window::DrawTriangle(Vector2 p1, Vector2 p2, Vector2 p3, Vector4 argb, bool fill)
+void Window::DrawTriangle(Vector2 p0, Vector2 p1, Vector2 p2, Vector4 argb, bool fill)
 {
-	Vector2 v[3] = { p1, p2, p3 };
-	bool isSorted;
-	do
+	p0.ToInt();
+	p1.ToInt();
+	p2.ToInt();
+	if (p0.y > p1.y)
 	{
-		isSorted = true;
-		for(int i = 0; i < 2; i++)
-		{
-			if(v[i].y > v[i + 1].y)
-			{
-				isSorted = false;
-				Vector2 temp = Vector2(v[i]);
-				v[i] = Vector2(v[i + 1]);
-				v[i + 1] = Vector2(v[i]);
-			}
-		}
-	} while(!isSorted);
+		Vector2 temp = p0;
+		p0 = p1;
+		p1 = temp;
+	}
+	if (p0.y > p2.y)
+	{
+		Vector2 temp = p0;
+		p0 = p2;
+		p2 = temp;
+	}
+	if (p1.y > p2.y)
+	{
+		Vector2 temp = p1;
+		p1 = p2;
+		p2 = temp;
+	}
 
+	DrawLine(p0, p1, argb);
+	DrawLine(p0, p2, argb);
 	DrawLine(p1, p2, argb);
-	DrawLine(p1, p3, argb);
-	DrawLine(p2, p3, argb);
 
 	if(!fill)
 		return;
 
-	if(v[1].y == v[2].y)
+	if(p1.y == p2.y)
 	{
-		DrawFlatBottomTriangle(v[0], v[1], v[2], argb);
+		DrawFlatBottomTriangle(p0, p1, p2, argb);
 	}
-	else if(v[0].y == v[1].y)
+	else if(p0.y == p1.y)
 	{
-		DrawFlatTopTriangle(v[0], v[1], v[2], argb);
+		DrawFlatTopTriangle(p0, p1, p2, argb);
 	}
 	else
 	{
-		Vector2 v4 = Vector2((v[0].x + ((v[1].y - v[0].y) / (v[2].y - v[0].y)) * (v[2].x - v[0].x)), v[1].y);
-		DrawFlatBottomTriangle(v[0], v[1], v4, argb);
-		DrawFlatTopTriangle(v[1], v4, v[2], argb);
+		Vector2 v3 = Vector2((p0.x + ((p1.y - p0.y) / (p2.y - p0.y)) * (p2.x - p0.x)), p1.y);
+		DrawFlatBottomTriangle(p0, p1, v3, argb);
+		DrawFlatTopTriangle(p1, v3, p2, argb);
 	}
+}
+
+void Window::DrawTriangleSlow(Vector2 p1, Vector2 p2, Vector2 p3, Vector4 argb)
+{
+	Gdiplus::BitmapData bmd;
+	if (!Gdiplus::Ok == bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+		return;
+
+	BYTE* dptr = (BYTE *)bmd.Scan0;
+
+	int minX = Mathf::Min(p1.x, Mathf::Min(p2.x, p3.x));
+	int maxX = Mathf::Max(p1.x, Mathf::Max(p2.x, p3.x));
+	int minY = Mathf::Min(p1.y, Mathf::Min(p2.y, p3.y));
+	int maxY = Mathf::Max(p1.y, Mathf::Max(p2.y, p3.y));
+
+	Vector2 vs1 = Vector2(p2.x - p1.x, p2.y - p1.y);
+	Vector2 vs2 = Vector2(p3.x - p1.x, p3.y - p1.y);
+
+	for (int x = minX; x <= maxX; x++)
+	{
+		for (int y = minY; y <= maxY; y++)
+		{
+			Vector2 q = Vector2(x - p1.x, y - p1.y);
+
+			float s = q.Cross(vs2) / vs1.Cross(vs2);
+			float t = vs1.Cross(q) / vs1.Cross(vs2);
+
+			if ((s >= 0) && (t >= 0) && (s + t <= 1))
+			{ /* inside triangle */
+				DrawPixel(dptr, x, y, bmd.Width, bmd.Height, argb);
+			}
+		}
+	}
+
+	bitmap->UnlockBits(&bmd);
 }

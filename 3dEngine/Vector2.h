@@ -13,6 +13,9 @@ public:
 	
 	float Surface();
 
+	float Cross(Vector2 v);
+	void ToInt();
+
 	Vector2(const Vector2 &v);
 
 	Vector2 operator+(const Vector2 &v);

@@ -16,4 +16,20 @@ public:
 	{
 		return tanf(rad);
 	}
+	inline static float Cos(float rad)
+	{
+		return cosf(rad);
+	}
+	inline static float Sin(float rad)
+	{
+		return sinf(rad);
+	}
+	inline static float Min(float a, float b)
+	{
+		return a < b ? a : b;
+	}
+	inline static float Max(float a, float b)
+	{
+		return a > b ? a : b;
+	}
 };

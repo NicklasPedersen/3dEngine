@@ -47,15 +47,15 @@ Vector3 Vector3::operator+(const float & f)
 
 Vector3 Vector3::operator*(const Matrix4 & m)
 {
-	x = x * m.m[0][0] + y * m.m[1][0] + z * m.m[2][0] + m.m[3][0];
-	y = x * m.m[0][1] + y * m.m[1][1] + z * m.m[2][1] + m.m[3][1];
-	z = x * m.m[0][2] + y * m.m[1][2] + z * m.m[2][2] + m.m[3][2];
-	float w = x * m.m[0][3] + y * m.m[1][3] + z * m.m[2][3] + m.m[3][3];
-	if(w != 0.0f)
+	float ox =		  x * m.m[0][0] + y * m.m[1][0] + z * m.m[2][0] + m.m[3][0];
+	float oy =		  x * m.m[0][1] + y * m.m[1][1] + z * m.m[2][1] + m.m[3][1];
+	float oz =		  x * m.m[0][2] + y * m.m[1][2] + z * m.m[2][2] + m.m[3][2];
+	float ow = x * m.m[0][3] + y * m.m[1][3] + z * m.m[2][3] + m.m[3][3];
+	if(ow != 0.0f)
 	{
-		x /= w;
-		y /= w;
-		z /= w;
+		ox /= ow;
+		oy /= ow;
+		oz /= ow;
 	}
-	return Vector3(x, y, z);
+	return Vector3(ox, oy, oz);
 }
