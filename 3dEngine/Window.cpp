@@ -25,6 +25,7 @@ LRESULT CALLBACK Window::RealWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 Window::Window()
 {
 	instance = GetModuleHandle(nullptr);
+	isBuffered = false;
 
 	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
@@ -69,6 +70,56 @@ Window::Window()
 
 	dimensions = Dimensions();
 	bitmap = new Gdiplus::Bitmap((INT)dimensions.x, (INT)dimensions.y, PixelFormat32bppARGB);
+}
+
+Window::Window(int width, int height)
+{
+	isBuffered = true;
+	instance = GetModuleHandle(nullptr);
+
+	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.style = 0;
+	wc.lpfnWndProc = WndProc;
+	wc.cbClsExtra = 0;
+	wc.cbWndExtra = 0;
+	wc.hInstance = instance;
+	wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wc.lpszMenuName = nullptr;
+	wc.lpszClassName = g_szClassName + windows++;
+	wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
+
+	if (!RegisterClassEx(&wc))
+	{
+		MessageBox(nullptr, "Window Registration Failed!", "Error!",
+			MB_ICONEXCLAMATION | MB_OK);
+		return;
+	}
+
+	hwnd = CreateWindowEx(
+		WS_EX_CLIENTEDGE,
+		g_szClassName,
+		"The title of my window",
+		WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME,
+		CW_USEDEFAULT, CW_USEDEFAULT, width, height,
+		nullptr, nullptr, instance, nullptr);
+
+	if (!hwnd)
+	{
+		MessageBox(nullptr, "Window Creation Failed!", "Error!",
+			MB_ICONEXCLAMATION | MB_OK);
+		return;
+	}
+	SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG)this);
+
+	ShowWindow(hwnd, SW_SHOWDEFAULT);
+	UpdateWindow(hwnd);
+
+	dimensions = Vector2(width, height);
+	buffer = (BYTE *)malloc(width * height * 4);
 }
 
 void Window::Update()
@@ -126,12 +177,202 @@ void Window::BitmapSetPixel(Vector2 position, Vector4 argb)
 
 void Window::BitmapShow()
 {
-
 	Gdiplus::Graphics gr(hwnd);
 	Gdiplus::Rect r = { 0, 0, (INT)dimensions.x, (INT)dimensions.y };
 	gr.DrawImage(bitmap, r);
 }
 
+void Window::BufferShow()
+{
+	Gdiplus::Graphics gr(hwnd);
+	Gdiplus::BitmapData bmd;
+	Gdiplus::Bitmap bm(dimensions.x, dimensions.y, PixelFormat32bppARGB);
+	if (Gdiplus::Ok == bm.LockBits(&Gdiplus::Rect(0, 0, bm.GetWidth(), bm.GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+	{
+		memcpy(bmd.Scan0, buffer, bm.GetWidth() * bm.GetHeight() * 4);
+		bm.UnlockBits(&bmd);
+		gr.DrawImage(&bm, Gdiplus::Rect(0, 0, bm.GetWidth(), bm.GetHeight()));
+	}
+}
+
+void Window::BufferClear(Vector4 argb)
+{
+	for (int i = 0; i < dimensions.Surface(); i++)
+	{
+		*(buffer + i * 4) = argb.w;
+		*(buffer + i * 4 + 1) = argb.z;
+		*(buffer + i * 4 + 2) = argb.y;
+		*(buffer + i * 4 + 3) = argb.x;
+	}
+}
+
+void Window::BufferDrawLineLow(int x0, int y0, int x1, int y1, Vector4 argb)
+{
+
+	int dx = x1 - x0;
+	int dy = y1 - y0;
+	int yi = 1;
+	if (dy < 0)
+	{
+		yi = -1;
+		dy = -dy;
+	}
+	float D = 2 * dy - dx;
+	float y = y0;
+	for (int x = x0; x <= x1; x++)
+	{
+		DrawPixel(buffer, x, y, dimensions.x, dimensions.y, argb);
+		if (D > 0)
+		{
+			y = y + yi;
+			D = D - 2 * dx;
+		}
+		D = D + 2 * dy;
+	}
+}
+
+void Window::BufferDrawLineHigh(int x0, int y0, int x1, int y1, Vector4 argb)
+{
+	int dx = x1 - x0;
+	int dy = y1 - y0;
+	float xi = 1;
+	if (dx < 0)
+	{
+		xi = -1;
+		dx = -dx;
+	}
+	float D = 2 * dx - dy;
+	float x = x0;
+	for (int y = y0; y <= y1; y++)
+	{
+		DrawPixel(buffer, x, y, dimensions.x, dimensions.y, argb);
+		if (D > 0)
+		{
+			x += xi;
+			D -= 2 * dy;
+		}
+		D += 2 * dx;
+	}
+}
+
+void Window::BufferDrawVerticalLine(int y0, int y1, int x, Vector4 argb)
+{
+	if (y0 > y1)
+		Helper<int>::Swap(&y0, &y1);
+	for (int y = y0; y <= y1; y++)
+		DrawPixel(buffer, x, y, dimensions.x, dimensions.y, argb);
+}
+
+void Window::BufferDrawHorizontalLine(int x0, int x1, int y, Vector4 argb)
+{
+	if (x0 > x1)
+		Helper<int>::Swap(&x0, &x1);
+	for (int x = x0; x <= x1; x++)
+		DrawPixel(buffer, x, y, dimensions.x, dimensions.y, argb);
+}
+
+void Window::BufferDrawLine(Vector2 v0, Vector2 v1, Vector4 argb)
+{
+	v0.Round();
+	v1.Round();
+	Vector2 delta = v1 - v0;
+	delta.Round();
+	if (delta.x == 0)
+	{
+		BufferDrawVerticalLine(v0.y, v1.y, v0.x, argb);
+	}
+	else if (delta.y == 0)
+	{
+		BufferDrawHorizontalLine(v0.x, v1.x, v0.y, argb);
+	}
+	else if (Mathf::Abs(delta.x) > Mathf::Abs(delta.y))
+	{
+		if (v0.x > v1.x)
+		{
+			BufferDrawLineLow(v1.x, v1.y, v0.x, v0.y, argb);
+		}
+		else
+		{
+			BufferDrawLineLow(v0.x, v0.y, v1.x, v1.y, argb);
+		}
+	}
+	else
+	{
+		if (v0.y > v1.y)
+		{
+			BufferDrawLineHigh(v1.x, v1.y, v0.x, v0.y, argb);
+		}
+		else
+		{
+			BufferDrawLineHigh(v0.x, v0.y, v1.x, v1.y, argb);
+		}
+	}
+}
+
+void Window::BufferDrawFlatBottomTriangle(Vector2 v0, Vector2 v1, Vector2 v2, Vector4 argb)
+{
+	float invslope1 = (v1.x - v0.x) / (v1.y - v0.y);
+	float invslope2 = (v2.x - v0.x) / (v2.y - v0.y);
+
+	float curx1 = v0.x;
+	float curx2 = v0.x;
+
+	for (int scanlineY = v0.y; scanlineY <= v1.y; scanlineY++)
+	{
+		BufferDrawHorizontalLine(curx1, curx2, scanlineY, argb);
+		curx1 += invslope1;
+		curx2 += invslope2;
+	}
+}
+
+void Window::BufferDrawFlatTopTriangle(Vector2 v0, Vector2 v1, Vector2 v2, Vector4 argb)
+{
+	float invslope1 = (v2.x - v0.x) / (v2.y - v0.y);
+	float invslope2 = (v2.x - v1.x) / (v2.y - v1.y);
+
+	float curx1 = v2.x;
+	float curx2 = v2.x;
+
+	for (int scanlineY = v2.y; scanlineY > v0.y; scanlineY--)
+	{
+		BufferDrawHorizontalLine(curx1, curx2, scanlineY, argb);
+		curx1 -= invslope1;
+		curx2 -= invslope2;
+	}
+}
+
+void Window::BufferDrawTriangle(Vector2 v0, Vector2 v1, Vector2 v2, Vector4 argb)
+{
+}
+
+void Window::BufferFillTriangle(Vector2 v0, Vector2 v1, Vector2 v2, Vector4 argb)
+{
+	v0.Round();
+	v1.Round();
+	v2.Round();
+
+	if (v0.y > v1.y)
+		Helper<Vector2>::Swap(&v0, &v1);
+	if (v0.y > v2.y)
+		Helper<Vector2>::Swap(&v0, &v2);
+	if (v1.y > v2.y)
+		Helper<Vector2>::Swap(&v1, &v2);
+
+	if (v1.y == v2.y)
+	{
+		BufferDrawFlatBottomTriangle(v0, v1, v2, argb);
+	}
+	else if (v0.y == v1.y)
+	{
+		BufferDrawFlatTopTriangle(v0, v1, v2, argb);
+	}
+	else
+	{
+		Vector2 v3 = Vector2((v0.x + ((v1.y - v0.y) / (v2.y - v0.y)) * (v2.x - v0.x)), v1.y);
+		BufferDrawFlatBottomTriangle(v0, v1, v3, argb);
+		BufferDrawFlatTopTriangle(v1, v3, v2, argb);
+	}
+}
 
 void Window::Clear(Vector4 argb)
 {
@@ -262,10 +503,10 @@ void Window::DrawPixel(BYTE *data, int x, int y, int width, int height, Vector4 
 
 void Window::DrawLine(Vector2 p0, Vector2 p1, Vector4 argb)
 {
-	p0.ToInt();
-	p1.ToInt();
+	p0.Round();
+	p1.Round();
 	Vector2 delta = p1 - p0;
-	delta.ToInt();
+	delta.Round();
 	if (delta.x == 0)
 	{
 		DrawVerticalLine(p0.y, p1.y, p0.x, argb);
@@ -380,50 +621,80 @@ void Window::DrawFlatTopTriangle(Vector2 v1, Vector2 v2, Vector2 v3, Vector4 arg
 	}
 }
 
-void Window::DrawTriangle(Vector2 p0, Vector2 p1, Vector2 p2, Vector4 argb, bool fill)
+void Window::DrawTriangle(Vector2 v0, Vector2 v1, Vector2 v2, Vector4 argb, bool fill)
 {
-	p0.ToInt();
-	p1.ToInt();
-	p2.ToInt();
-	if (p0.y > p1.y)
-	{
-		Vector2 temp = p0;
-		p0 = p1;
-		p1 = temp;
-	}
-	if (p0.y > p2.y)
-	{
-		Vector2 temp = p0;
-		p0 = p2;
-		p2 = temp;
-	}
-	if (p1.y > p2.y)
-	{
-		Vector2 temp = p1;
-		p1 = p2;
-		p2 = temp;
-	}
+	v0.Round();
+	v1.Round();
+	v2.Round();
 
-	DrawLine(p0, p1, argb);
-	DrawLine(p0, p2, argb);
-	DrawLine(p1, p2, argb);
+	DrawLine(v0, v1, argb);
+	DrawLine(v0, v2, argb);
+	DrawLine(v1, v2, argb);
 
-	if(!fill)
+	if (!fill)
 		return;
 
-	if(p1.y == p2.y)
+	if (v0.y > v1.y)
+		Helper<Vector2>::Swap(&v0, &v1);
+	if (v0.y > v2.y)
+		Helper<Vector2>::Swap(&v0, &v2);
+	if (v1.y > v2.y)
+		Helper<Vector2>::Swap(&v1, &v2);
+
+
+	if (v1.y == v2.y)
 	{
-		DrawFlatBottomTriangle(p0, p1, p2, argb);
+		DrawFlatBottomTriangle(v0, v1, v2, argb);
 	}
-	else if(p0.y == p1.y)
+	else if (v0.y == v1.y)
 	{
-		DrawFlatTopTriangle(p0, p1, p2, argb);
+		DrawFlatTopTriangle(v0, v1, v2, argb);
 	}
 	else
 	{
-		Vector2 v3 = Vector2((p0.x + ((p1.y - p0.y) / (p2.y - p0.y)) * (p2.x - p0.x)), p1.y);
-		DrawFlatBottomTriangle(p0, p1, v3, argb);
-		DrawFlatTopTriangle(p1, v3, p2, argb);
+		Vector2 v3 = Vector2((v0.x + ((v1.y - v0.y) / (v2.y - v0.y)) * (v2.x - v0.x)), v1.y);
+		DrawFlatBottomTriangle(v0, v1, v3, argb);
+		DrawFlatTopTriangle(v1, v3, v2, argb);
+	}
+}
+
+void Window::DrawTriangle(Vector2 v0, Vector2 v1, Vector2 v2, Vector4 argb)
+{
+	v0.Round();
+	v1.Round();
+	v2.Round();
+
+	DrawLine(v0, v1, argb);
+	DrawLine(v0, v2, argb);
+	DrawLine(v1, v2, argb);
+}
+
+void Window::FillTriangle(Vector2 v0, Vector2 v1, Vector2 v2, Vector4 argb)
+{
+	v0.Round();
+	v1.Round();
+	v2.Round();
+
+	if (v0.y > v1.y)
+		Helper<Vector2>::Swap(&v0, &v1);
+	if (v0.y > v2.y)
+		Helper<Vector2>::Swap(&v0, &v2);
+	if (v1.y > v2.y)
+		Helper<Vector2>::Swap(&v1, &v2);
+
+	if (v1.y == v2.y)
+	{
+		DrawFlatBottomTriangle(v0, v1, v2, argb);
+	}
+	else if (v0.y == v1.y)
+	{
+		DrawFlatTopTriangle(v0, v1, v2, argb);
+	}
+	else
+	{
+		Vector2 v3 = Vector2((v0.x + ((v1.y - v0.y) / (v2.y - v0.y)) * (v2.x - v0.x)), v1.y);
+		DrawFlatBottomTriangle(v0, v1, v3, argb);
+		DrawFlatTopTriangle(v1, v3, v2, argb);
 	}
 }
 

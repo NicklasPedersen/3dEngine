@@ -1,5 +1,6 @@
 #pragma once
 #include <Windows.h>
+#include "Mathf.h"
 
 class Vector2
 {
@@ -14,7 +15,8 @@ public:
 	float Surface();
 
 	float Cross(Vector2 v);
-	void ToInt();
+	void Round();
+	
 
 	Vector2(const Vector2 &v);
 

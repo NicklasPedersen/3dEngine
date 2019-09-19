@@ -1,4 +1,5 @@
 #include "Vector3.h"
+#include <math.h>
 
 Vector3::Vector3()
 {
@@ -8,6 +9,29 @@ Vector3::Vector3()
 Vector3::Vector3(float x, float y, float z)
 {
 	this->x = x, this->y = y, this->z = z;
+}
+
+Vector3 Vector3::Cross(Vector3 v)
+{
+	return Vector3(	y * v.z - z * v.y,
+					z * v.x - x * v.z, 
+					x * v.y - y * v.x);
+}
+
+float Vector3::Dot(Vector3 v)
+{
+	return x * v.x + y * v.y + z * v.z;
+}
+
+void Vector3::Normalize()
+{
+	float length = sqrtf(x * x + y * y + z * z);
+	if (length > 0)
+	{
+		x /= length;
+		y /= length;
+		z /= length;
+	}
 }
 
 Vector2 Vector3::xy()
@@ -43,6 +67,16 @@ Vector2 Vector3::zy()
 Vector3 Vector3::operator+(const float & f)
 {
 	return Vector3(x + f, y + f, z + f);
+}
+
+Vector3 Vector3::operator+(const Vector3 & v)
+{
+	return Vector3(x + v.x, y + v.y, z + v.z);
+}
+
+Vector3 Vector3::operator-(const Vector3 & v)
+{
+	return Vector3(x - v.x, y - v.y, z - v.z);
 }
 
 Vector3 Vector3::operator*(const Matrix4 & m)
