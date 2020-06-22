@@ -7,13 +7,8 @@
 #include <vector>
 #include <algorithm>
 
-Window *w = new Window(500, 500);
-double current;
-double last;
-
 static double g_freq;
 static bool g_timerInitialized = false;
-
 
 double GetTime()
 {
@@ -37,6 +32,10 @@ double GetTime()
 
 int main()
 {
+
+	Window* w = new Window(500, 500);
+	double current;
+	double last;
 	Mesh cube;
 	Vector3 camera = Vector3(0,0,0);
 	Vector3 forward;
