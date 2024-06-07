@@ -32,7 +32,11 @@ Mesh::Mesh(const char *sFilename)
 		{
 			int f[3];
 			s >> junk >> f[0] >> f[1] >> f[2];
-			tris.push_back({ verts[f[0] - 1], verts[f[1] - 1], verts[f[2] - 1] });
+			Vector3 v0 = verts[f[0] - 1];
+			Vector3 v1 = verts[f[1] - 1];
+			Vector3 v2 = verts[f[2] - 1];
+
+			tris.push_back({ v0, v1, v2 });
 		}
 	}
 }

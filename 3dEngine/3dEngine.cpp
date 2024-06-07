@@ -40,8 +40,8 @@ int main()
 	Vector3 camera = Vector3(0,0,0);
 	Vector3 forward;
 	Vector3 up;
-	/*
-	cube.tris = { {Vector3(0,0,0), Vector3(0,1,0), Vector3(1,1,0)},
+	
+	/*cube.tris = { {Vector3(0,0,0), Vector3(0,1,0), Vector3(1,1,0)},
 				{Vector3(0,0,0), Vector3(1,1,0), Vector3(1,0,0)}, 
 
 				{Vector3(1,0,0), Vector3(1,1,0), Vector3(1,1,1)},
@@ -57,9 +57,9 @@ int main()
 				{Vector3(0,1,0), Vector3(1,1,1), Vector3(1,1,0)},
 
 				{Vector3(1,0,1), Vector3(0,0,1), Vector3(0,0,0)},
-				{Vector3(1,0,1), Vector3(0,0,0), Vector3(1,0,0)}};
-	/*cube.tris = { {Vector3(0,0,1), Vector3(0,1,1), Vector3(1,0,1)} };*/
-	cube = Mesh("Ship0.obj");
+				{Vector3(1,0,1), Vector3(0,0,0), Vector3(1,0,0)}};*/
+	//cube.tris = { {Vector3(0,0,1), Vector3(0,1,1), Vector3(1,0,1)} };
+	cube = Mesh("Ship.obj.txt");
 	
 
 	float fNear = 0.1f;

@@ -147,13 +147,15 @@ RECT Window::Rectangle()
 Vector2 Window::TopLeft()
 {
 	RECT r = Rectangle();
-	return Vector2(r.left, r.top);
+	Vector2 v(r.left, r.top);
+	return v;
 }
 
 Vector2 Window::BottomRight()
 {
 	RECT r = Rectangle();
-	return Vector2(r.right, r.bottom);
+	Vector2 v(r.right, r.bottom);
+	return v;
 }
 
 Vector2 Window::Dimensions()
@@ -187,7 +189,8 @@ void Window::BufferShow()
 	Gdiplus::Graphics gr(hwnd);
 	Gdiplus::BitmapData bmd;
 	Gdiplus::Bitmap bm(dimensions.x, dimensions.y, PixelFormat32bppARGB);
-	if (Gdiplus::Ok == bm.LockBits(&Gdiplus::Rect(0, 0, bm.GetWidth(), bm.GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+	Gdiplus::Rect bmRect(0, 0, bm.GetWidth(), bm.GetHeight());
+	if (Gdiplus::Ok == bm.LockBits(&bmRect, Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
 	{
 		memcpy(bmd.Scan0, buffer, bm.GetWidth() * bm.GetHeight() * 4);
 		bm.UnlockBits(&bmd);
@@ -377,8 +380,8 @@ void Window::BufferFillTriangle(Vector2 v0, Vector2 v1, Vector2 v2, Vector4 argb
 void Window::Clear(Vector4 argb)
 {
 	Gdiplus::BitmapData bmd;
-	Gdiplus::Rect r = { 0, 0, (INT)dimensions.x, (INT)dimensions.y };
-	if(Gdiplus::Ok == bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+	Gdiplus::Rect bmRect(0, 0, bitmap->GetWidth(), bitmap->GetHeight());
+	if(Gdiplus::Ok == bitmap->LockBits(&bmRect, Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
 	{
 		BYTE* dptr = (BYTE *) bmd.Scan0;
 		for(int i = 0; i < bmd.Width * bmd.Height; i++)
@@ -395,7 +398,8 @@ void Window::Clear(Vector4 argb)
 void Window::DrawLineLow(int x0, int y0, int x1, int y1, Vector4 argb)
 {
 	Gdiplus::BitmapData bmd;
-	if (Gdiplus::Ok != bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+	Gdiplus::Rect bmRect(0, 0, bitmap->GetWidth(), bitmap->GetHeight());
+	if (Gdiplus::Ok != bitmap->LockBits(&bmRect, Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
 		return;
 	BYTE* dptr = (BYTE *)bmd.Scan0;
 
@@ -425,7 +429,8 @@ void Window::DrawLineLow(int x0, int y0, int x1, int y1, Vector4 argb)
 void Window::DrawLineHigh(int x0, int y0, int x1, int y1, Vector4 argb)
 {
 	Gdiplus::BitmapData bmd;
-	if (Gdiplus::Ok != bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+	Gdiplus::Rect bmRect(0, 0, bitmap->GetWidth(), bitmap->GetHeight());
+	if (Gdiplus::Ok != bitmap->LockBits(&bmRect, Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
 		return;
 	BYTE* dptr = (BYTE *)bmd.Scan0;
 
@@ -455,7 +460,8 @@ void Window::DrawLineHigh(int x0, int y0, int x1, int y1, Vector4 argb)
 void Window::DrawVerticalLine(int y0, int y1, int x, Vector4 argb)
 {
 	Gdiplus::BitmapData bmd;
-	if (Gdiplus::Ok != bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+	Gdiplus::Rect bmRect(0, 0, bitmap->GetWidth(), bitmap->GetHeight());
+	if (Gdiplus::Ok != bitmap->LockBits(&bmRect, Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
 		return;
 	BYTE* dptr = (BYTE *)bmd.Scan0;
 
@@ -474,7 +480,9 @@ void Window::DrawVerticalLine(int y0, int y1, int x, Vector4 argb)
 void Window::DrawHorizontalLine(int x0, int x1, int y, Vector4 argb)
 {
 	Gdiplus::BitmapData bmd;
-	if (Gdiplus::Ok != bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+	Gdiplus::Rect bmRect(0, 0, bitmap->GetWidth(), bitmap->GetHeight());
+
+	if (Gdiplus::Ok != bitmap->LockBits(&bmRect, Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
 		return;
 	BYTE* dptr = (BYTE *)bmd.Scan0;
 
@@ -554,8 +562,8 @@ void Window::DrawLine1(Vector2 p1, Vector2 p2, Vector4 argb)
 	}
 	
 	Gdiplus::BitmapData bmd;
-	Gdiplus::Rect r = { 0, 0, (INT)dimensions.x, (INT)dimensions.y };
-	if(Gdiplus::Ok == bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+	Gdiplus::Rect bmRect(0, 0, bitmap->GetWidth(), bitmap->GetHeight());
+	if(Gdiplus::Ok == bitmap->LockBits(&bmRect, Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
 	{
 		float deltaerr = Mathf::Abs(delta.y / delta.x);
 		float error = 0;
@@ -578,7 +586,8 @@ void Window::DrawLine1(Vector2 p1, Vector2 p2, Vector4 argb)
 void Window::DrawVerticalLine(Vector2 p1, int length, Vector4 argb)
 {
 	Gdiplus::BitmapData bmd;
-	if(Gdiplus::Ok == bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+	Gdiplus::Rect bmRect(0, 0, bitmap->GetWidth(), bitmap->GetHeight());
+	if(Gdiplus::Ok == bitmap->LockBits(&bmRect, Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
 	{
 		BYTE* dptr = (BYTE *) bmd.Scan0;
 		for(int i = 0; i < length; i++)
@@ -701,7 +710,8 @@ void Window::FillTriangle(Vector2 v0, Vector2 v1, Vector2 v2, Vector4 argb)
 void Window::DrawTriangleSlow(Vector2 p1, Vector2 p2, Vector2 p3, Vector4 argb)
 {
 	Gdiplus::BitmapData bmd;
-	if (!Gdiplus::Ok == bitmap->LockBits(&Gdiplus::Rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight()), Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
+	Gdiplus::Rect bmRect(0, 0, bitmap->GetWidth(), bitmap->GetHeight());
+	if (!Gdiplus::Ok == bitmap->LockBits(&bmRect, Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &bmd))
 		return;
 
 	BYTE* dptr = (BYTE *)bmd.Scan0;
